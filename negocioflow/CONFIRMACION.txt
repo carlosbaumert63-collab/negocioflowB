@@ -1,0 +1,4 @@
+NegocioFlow - archivo de confirmación
+Generado: 2026-09-30 18:58 (hora de Chile)
+Este archivo se agregó únicamente para que Carlos pueda confirmar
+que este ZIP corresponde a esta versión del proyecto.
