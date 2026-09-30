@@ -1,10 +1,11 @@
 "use client";
 import React, { useEffect, useMemo, useState } from "react";
-import { Plus, X, Trash2, Search, Pencil, Undo2, Receipt, Loader2 } from "lucide-react";
+import { Plus, X, Trash2, Search, Pencil, Undo2, Receipt, Loader2, FileDown } from "lucide-react";
 import { supabase } from "../lib/supabaseClient";
 import { fmtCLP, PAYMENT_METHODS, type Business, type Product, type Sale, type SaleItem, type Customer } from "../lib/types";
 import { localISODate, formatDateCL } from "../lib/dates";
 import { friendlyDbError } from "../lib/plan";
+import { exportSaleReceiptPDF } from "../lib/export";
 import { usePlan } from "./PlanContext";
 
 export default function Ventas({ business }: { business: Business }) {
@@ -166,6 +167,13 @@ export default function Ventas({ business }: { business: Business }) {
                     title="Anular"
                   >
                     <Undo2 size={14} />
+                  </button>
+                  <button
+                    onClick={() => exportSaleReceiptPDF(business, s)}
+                    className="text-muted hover:text-ink"
+                    title="Comprobante PDF (no es boleta electrónica)"
+                  >
+                    <FileDown size={14} />
                   </button>
                   {isPro && (
                     <button

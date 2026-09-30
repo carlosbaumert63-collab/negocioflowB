@@ -10,6 +10,32 @@ export interface Business {
   tax_id?: string | null;
   legal_name?: string | null;
   legal_address?: string | null;
+  monthly_sales_goal?: number | null;
+}
+
+export type BusinessRole = "owner" | "vendedor";
+
+export interface BusinessMember {
+  business_id: string;
+  user_id: string;
+  role: "vendedor";
+  created_at: string;
+  member_email?: string | null;
+}
+
+export interface CashRegister {
+  id: string;
+  business_id: string;
+  opening_amount: number;
+  opened_at: string;
+  closed_at: string | null;
+  expected_amount: number | null;
+  counted_amount: number | null;
+  difference: number | null;
+  status: "open" | "closed";
+  notes: string | null;
+  is_demo?: boolean;
+  created_at: string;
 }
 
 export interface DteDocument {

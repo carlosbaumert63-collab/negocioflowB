@@ -36,5 +36,8 @@ export function friendlyDbError(message: string | null | undefined): string {
   if (match) {
     return match[2]?.trim() || DB_ERROR_LABELS[match[1]] || message;
   }
+  if (/row-level security/i.test(message)) {
+    return "No tienes permiso para hacer esto. Si eres vendedor, esta acción es solo para el dueño del negocio.";
+  }
   return message;
 }

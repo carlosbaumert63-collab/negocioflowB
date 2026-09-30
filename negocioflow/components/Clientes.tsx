@@ -1,10 +1,11 @@
 "use client";
 import React, { useEffect, useState } from "react";
-import { Plus, X, Phone, Mail, Trash2, AlertCircle, Check } from "lucide-react";
+import { Plus, X, Phone, Mail, Trash2, AlertCircle, Check, MessageCircle } from "lucide-react";
 import { supabase } from "../lib/supabaseClient";
 import { fmtCLP, type Business, type Customer } from "../lib/types";
 import { formatDateCL, localISODate } from "../lib/dates";
 import ProGate from "./ProGate";
+import OwnerGate from "./OwnerGate";
 import { usePlan } from "./PlanContext";
 import { friendlyDbError } from "../lib/plan";
 
@@ -19,6 +20,16 @@ interface CustomerStats extends Customer {
 function daysSince(iso: string): number {
   const ms = new Date(localISODate()).getTime() - new Date(iso).getTime();
   return Math.max(0, Math.round(ms / (1000 * 60 * 60 * 24)));
+}
+
+// Arma un link de WhatsApp (wa.me) con el mensaje ya escrito. No usa ninguna
+// API paga: simplemente abre WhatsApp Web o la app con el texto listo.
+function whatsAppLink(phone: string, message: string): string {
+  let digits = phone.replace(/\D/g, "");
+  if (!digits.startsWith("56")) {
+    digits = digits.startsWith("0") ? "56" + digits.slice(1) : "56" + digits;
+  }
+  return `https://wa.me/${digits}?text=${encodeURIComponent(message)}`;
 }
 
 function ClientesInner({ business }: { business: Business }) {
@@ -182,12 +193,30 @@ function ClientesInner({ business }: { business: Business }) {
                     Te debe <strong>{fmtCLP(c.pendingAmount)}</strong>
                     {c.pendingSince && ` hace ${daysSince(c.pendingSince)} día(s)`}
                   </div>
-                  <button
-                    onClick={() => markCustomerPaid(c.id)}
-                    className="flex items-center gap-1 text-xs font-medium text-amber-700 underline flex-shrink-0"
-                  >
-                    <Check size={12} /> Marcar pagado
-                  </button>
+                  <div className="flex items-center gap-3 flex-shrink-0">
+                    {c.phone && (
+                      <a
+                        href={whatsAppLink(
+                          c.phone,
+                          `Hola ${c.name}, te escribo de ${business.name} para recordarte que tienes un saldo pendiente de ${fmtCLP(
+                            c.pendingAmount
+                          )}. ¡Gracias!`
+                        )}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="flex items-center gap-1 text-xs font-medium text-amber-700 underline"
+                        title="Recordar por WhatsApp"
+                      >
+                        <MessageCircle size={12} /> WhatsApp
+                      </a>
+                    )}
+                    <button
+                      onClick={() => markCustomerPaid(c.id)}
+                      className="flex items-center gap-1 text-xs font-medium text-amber-700 underline"
+                    >
+                      <Check size={12} /> Marcar pagado
+                    </button>
+                  </div>
                 </div>
               )}
             </div>
@@ -307,8 +336,10 @@ function CustomerForm({
 export default function Clientes({ business }: { business: Business }) {
   usePlan();
   return (
-    <ProGate title="Clientes" description="Registra tus clientes y sigue cuánto te compran.">
-      <ClientesInner business={business} />
-    </ProGate>
+    <OwnerGate title="Clientes">
+      <ProGate title="Clientes" description="Registra tus clientes y sigue cuánto te compran.">
+        <ClientesInner business={business} />
+      </ProGate>
+    </OwnerGate>
   );
 }

@@ -5,6 +5,7 @@ import { supabase } from "../lib/supabaseClient";
 import { fmtCLP, type Business, type Supplier, type Product } from "../lib/types";
 import { formatDateCL, localISODate } from "../lib/dates";
 import ProGate from "./ProGate";
+import OwnerGate from "./OwnerGate";
 import { friendlyDbError } from "../lib/plan";
 
 interface PurchaseRow {
@@ -304,8 +305,10 @@ function NuevaCompraModal({
 
 export default function Compras({ business }: { business: Business }) {
   return (
-    <ProGate title="Compras" description="Registra compras a proveedores: aumentan tu stock y costo automáticamente.">
-      <ComprasInner business={business} />
-    </ProGate>
+    <OwnerGate title="Compras">
+      <ProGate title="Compras" description="Registra compras a proveedores: aumentan tu stock y costo automáticamente.">
+        <ComprasInner business={business} />
+      </ProGate>
+    </OwnerGate>
   );
 }

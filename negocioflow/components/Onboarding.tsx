@@ -6,9 +6,11 @@ import { BUSINESS_TYPES, PAYMENT_METHODS } from "../lib/types";
 export default function Onboarding({
   userId,
   onDone,
+  onCancel,
 }: {
   userId: string;
   onDone: (businessId: string) => void;
+  onCancel?: () => void;
 }) {
   const [step, setStep] = useState(0);
   const [name, setName] = useState("");
@@ -51,7 +53,12 @@ export default function Onboarding({
 
   return (
     <div className="min-h-screen bg-surface flex items-center justify-center px-5">
-      <div className="w-full max-w-md bg-white border border-line rounded-2xl p-7 shadow-sm">
+      <div className="w-full max-w-md bg-white border border-line rounded-2xl p-7 shadow-sm relative">
+        {onCancel && (
+          <button onClick={onCancel} className="absolute top-4 right-4 text-muted hover:text-ink">
+            ✕
+          </button>
+        )}
         <div className="flex gap-1.5 mb-6">
           {steps.map((_, i) => (
             <div

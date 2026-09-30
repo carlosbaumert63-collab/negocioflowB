@@ -1,10 +1,11 @@
 "use client";
 import React, { useEffect, useState } from "react";
-import { TrendingUp, TrendingDown, AlertTriangle, Lock, Sparkles, Loader2, X } from "lucide-react";
+import { TrendingUp, TrendingDown, AlertTriangle, Lock, Sparkles, Loader2, X, Target, Pencil, Check } from "lucide-react";
 import { supabase } from "../lib/supabaseClient";
 import { fmtCLP, type Business } from "../lib/types";
 import { usePlan } from "./PlanContext";
 import { seedDemoData, clearDemoData, hasDemoData } from "../lib/demoData";
+import { FREE_LIMITS } from "../lib/plan";
 
 function startOfMonth(d: Date) {
   return new Date(d.getFullYear(), d.getMonth(), 1);
@@ -34,15 +35,31 @@ interface Stats {
   pendingReceivable: number;
   pendingCustomers: number;
   breakEvenSales: number;
+  monthSalesCount: number;
+  productsCount: number;
 }
 
 export default function Dashboard({ business }: { business: Business }) {
-  const { isPro, goToPlan } = usePlan();
+  const { isPro, isOwner, goToPlan } = usePlan();
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
   const [hasAnyData, setHasAnyData] = useState(true);
   const [demoActive, setDemoActive] = useState(false);
   const [demoBusy, setDemoBusy] = useState(false);
+  const [goal, setGoal] = useState(business.monthly_sales_goal || null);
+  const [editingGoal, setEditingGoal] = useState(false);
+  const [goalInput, setGoalInput] = useState(String(business.monthly_sales_goal || ""));
+  const [savingGoal, setSavingGoal] = useState(false);
+
+  async function saveGoal() {
+    const value = Number(goalInput);
+    setSavingGoal(true);
+    const newGoal = Number.isFinite(value) && value > 0 ? value : null;
+    await supabase.from("businesses").update({ monthly_sales_goal: newGoal }).eq("id", business.id);
+    setGoal(newGoal);
+    setSavingGoal(false);
+    setEditingGoal(false);
+  }
 
   async function checkDemoState() {
     const [{ count: realCount }, demo] = await Promise.all([
@@ -99,6 +116,8 @@ export default function Dashboard({ business }: { business: Business }) {
         productsRes,
         saleItemsRes,
         pendingRes,
+        monthSalesCountRes,
+        productsCountRes,
       ] = await Promise.all([
         supabase.from("sales").select("total, profit").eq("business_id", business.id).eq("sale_date", today),
         supabase.from("expenses").select("amount").eq("business_id", business.id).eq("expense_date", today),
@@ -132,6 +151,18 @@ export default function Dashboard({ business }: { business: Business }) {
           .select("total, customer_id")
           .eq("business_id", business.id)
           .eq("pending_payment", true),
+        supabase
+          .from("sales")
+          .select("id", { count: "exact", head: true })
+          .eq("business_id", business.id)
+          .eq("is_demo", false)
+          .gte("sale_date", monthStart)
+          .lte("sale_date", monthEnd),
+        supabase
+          .from("products")
+          .select("id", { count: "exact", head: true })
+          .eq("business_id", business.id)
+          .eq("is_demo", false),
       ]);
 
       if (!active) return;
@@ -191,6 +222,8 @@ export default function Dashboard({ business }: { business: Business }) {
         pendingReceivable,
         pendingCustomers,
         breakEvenSales,
+        monthSalesCount: monthSalesCountRes.count || 0,
+        productsCount: productsCountRes.count || 0,
       });
       setLoading(false);
     }
@@ -202,6 +235,25 @@ export default function Dashboard({ business }: { business: Business }) {
 
   if (loading || !stats) {
     return <div className="text-sm text-muted py-10 text-center">Cargando…</div>;
+  }
+
+  if (!isOwner) {
+    return (
+      <div>
+        <h1 className="text-xl font-bold mb-1">Hola 👋</h1>
+        <p className="text-sm text-muted mb-6">Así va {business.name} hoy.</p>
+        <div className="grid grid-cols-2 gap-3 mb-6">
+          <StatCard label="Ventas de hoy" value={fmtCLP(stats.todaySales)} highlight />
+          <StatCard label="N° de ventas" value={String(stats.todayCount)} />
+        </div>
+        {(stats.outOfStockCount > 0 || stats.lowStockCount > 0) && (
+          <div className="space-y-2">
+            {stats.outOfStockCount > 0 && <Alert text={`${stats.outOfStockCount} producto(s) están agotados.`} />}
+            {stats.lowStockCount > 0 && <Alert text={`${stats.lowStockCount} producto(s) tienen stock bajo.`} />}
+          </div>
+        )}
+      </div>
+    );
   }
 
   const salesChange =
@@ -247,6 +299,24 @@ export default function Dashboard({ business }: { business: Business }) {
           </button>
         </div>
       )}
+
+      {!isPro &&
+        (stats.monthSalesCount >= FREE_LIMITS.sales * 0.8 || stats.productsCount >= FREE_LIMITS.products * 0.8) && (
+          <button
+            onClick={goToPlan}
+            className="flex items-center gap-2 text-sm px-3 py-2.5 rounded-lg border border-amber-100 bg-amber-50 text-amber-700 mb-6 w-full text-left"
+          >
+            <AlertTriangle size={14} className="flex-shrink-0" />
+            {stats.monthSalesCount >= FREE_LIMITS.sales
+              ? "Llegaste al límite de 50 ventas de este mes en el plan Free."
+              : stats.monthSalesCount >= FREE_LIMITS.sales * 0.8
+              ? `Vas en ${stats.monthSalesCount} de ${FREE_LIMITS.sales} ventas este mes (plan Free).`
+              : stats.productsCount >= FREE_LIMITS.products
+              ? "Llegaste al límite de 20 productos en el plan Free."
+              : `Vas en ${stats.productsCount} de ${FREE_LIMITS.products} productos (plan Free).`}{" "}
+            Mejora a Pro para no tener límites.
+          </button>
+        )}
 
       {/* alerts */}
       {isPro ? (
@@ -313,6 +383,71 @@ export default function Dashboard({ business }: { business: Business }) {
             {salesChange >= 0 ? <TrendingUp size={14} /> : <TrendingDown size={14} />}
             {Math.abs(salesChange).toFixed(0)}% vs. mes anterior
           </span>
+        )}
+      </div>
+
+      {/* meta de venta mensual */}
+      <div className="bg-white border border-line rounded-xl p-4 mb-6">
+        <div className="flex items-center justify-between mb-1">
+          <div className="flex items-center gap-1.5 text-xs text-muted">
+            <Target size={13} /> Meta de venta este mes
+          </div>
+          {!editingGoal && (
+            <button
+              onClick={() => {
+                setGoalInput(String(goal || ""));
+                setEditingGoal(true);
+              }}
+              className="text-muted hover:text-ink"
+            >
+              <Pencil size={13} />
+            </button>
+          )}
+        </div>
+        {editingGoal ? (
+          <div className="flex items-center gap-2 mt-2">
+            <input
+              type="number"
+              autoFocus
+              value={goalInput}
+              onChange={(e) => setGoalInput(e.target.value)}
+              placeholder="Ej. 3000000"
+              className="flex-1 px-3 py-2 border border-line rounded-lg text-sm"
+            />
+            <button
+              onClick={saveGoal}
+              disabled={savingGoal}
+              className="bg-brand-500 text-white px-3 py-2 rounded-lg disabled:opacity-60"
+            >
+              <Check size={16} />
+            </button>
+          </div>
+        ) : goal ? (
+          <>
+            <div className="text-base mt-1">
+              <strong className="text-ink">{fmtCLP(stats.monthSales)}</strong>
+              <span className="text-muted"> de {fmtCLP(goal)}</span>
+            </div>
+            <div className="h-2 bg-surface rounded-full overflow-hidden mt-2">
+              <div
+                className="h-full bg-brand-500 rounded-full transition-all"
+                style={{ width: `${Math.min(100, (stats.monthSales / goal) * 100)}%` }}
+              />
+            </div>
+            <div className="text-xs text-muted mt-1.5">
+              {stats.monthSales >= goal
+                ? "¡Meta cumplida este mes! 🎉"
+                : `Vas en ${((stats.monthSales / goal) * 100).toFixed(0)}% — faltan ${fmtCLP(goal - stats.monthSales)}.`}
+            </div>
+          </>
+        ) : (
+          <div className="text-sm text-muted mt-1">
+            No has definido una meta.{" "}
+            <button onClick={() => setEditingGoal(true)} className="underline text-ink">
+              Define una
+            </button>{" "}
+            para ver tu avance acá.
+          </div>
         )}
       </div>
 

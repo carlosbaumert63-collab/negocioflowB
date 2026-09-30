@@ -17,6 +17,7 @@ import { fmtCLP, type Business } from "../lib/types";
 import { exportSalesCSV, exportExpensesCSV, exportProductsCSV, exportMonthlyPDF } from "../lib/export";
 import { usePlan } from "./PlanContext";
 import UpgradePanel from "./UpgradePanel";
+import OwnerGate from "./OwnerGate";
 
 const RANGES = [
   { key: "7d", label: "Últimos 7 días", days: 7 },
@@ -26,7 +27,7 @@ const RANGES = [
 
 const COLORS = ["#059669", "#F59E0B", "#3B82F6", "#EF4444", "#8B5CF6", "#EC4899"];
 
-export default function Reportes({ business }: { business: Business }) {
+function ReportesInner({ business }: { business: Business }) {
   const { isPro } = usePlan();
   const [range, setRange] = useState("30d");
   const [exporting, setExporting] = useState<string | null>(null);
@@ -270,6 +271,14 @@ function Card({ title, children }: { title: string; children: React.ReactNode })
       <div className="text-sm font-semibold mb-3">{title}</div>
       {children}
     </div>
+  );
+}
+
+export default function Reportes({ business }: { business: Business }) {
+  return (
+    <OwnerGate title="Reportes">
+      <ReportesInner business={business} />
+    </OwnerGate>
   );
 }
 

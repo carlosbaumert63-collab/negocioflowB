@@ -14,6 +14,7 @@ export default function Productos({ business }: { business: Business }) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [query, setQuery] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("");
   const [form, setForm] = useState(EMPTY_FORM);
 
   const load = async () => {
@@ -31,16 +32,24 @@ export default function Productos({ business }: { business: Business }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [business.id]);
 
+  const categories = useMemo(() => {
+    const set = new Set<string>();
+    products.forEach((p) => p.category && set.add(p.category));
+    return Array.from(set).sort();
+  }, [products]);
+
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return products;
-    return products.filter(
-      (p) =>
+    return products.filter((p) => {
+      const matchesQuery =
+        !q ||
         p.name.toLowerCase().includes(q) ||
         (p.sku || "").toLowerCase().includes(q) ||
-        (p.category || "").toLowerCase().includes(q)
-    );
-  }, [products, query]);
+        (p.category || "").toLowerCase().includes(q);
+      const matchesCategory = !categoryFilter || p.category === categoryFilter;
+      return matchesQuery && matchesCategory;
+    });
+  }, [products, query, categoryFilter]);
 
   function openNew() {
     setEditingId(null);
@@ -128,7 +137,18 @@ export default function Productos({ business }: { business: Business }) {
               <input value={form.sku} onChange={(e) => setForm({ ...form, sku: e.target.value })} className={inputCls} />
             </FormField>
             <FormField label="Categoría">
-              <input value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} className={inputCls} />
+              <input
+                value={form.category}
+                onChange={(e) => setForm({ ...form, category: e.target.value })}
+                className={inputCls}
+                list="category-options"
+                placeholder="Ej. Bebidas, Aseo…"
+              />
+              <datalist id="category-options">
+                {categories.map((c) => (
+                  <option key={c} value={c} />
+                ))}
+              </datalist>
             </FormField>
             <FormField label="Precio de venta">
               <input type="number" value={form.sale_price} onChange={(e) => setForm({ ...form, sale_price: e.target.value })} className={inputCls} />
@@ -151,7 +171,7 @@ export default function Productos({ business }: { business: Business }) {
       )}
 
       {products.length > 0 && (
-        <div className="relative mb-4">
+        <div className="relative mb-3">
           <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
           <input
             value={query}
@@ -159,6 +179,30 @@ export default function Productos({ business }: { business: Business }) {
             placeholder="Buscar por nombre, SKU o categoría…"
             className="w-full pl-9 pr-3 py-2 border border-line rounded-lg text-sm"
           />
+        </div>
+      )}
+
+      {categories.length > 0 && (
+        <div className="flex items-center gap-2 mb-4 flex-wrap">
+          <button
+            onClick={() => setCategoryFilter("")}
+            className={`text-xs px-3 py-1.5 rounded-full border ${
+              !categoryFilter ? "border-brand-500 bg-brand-50 text-brand-700" : "border-line text-muted"
+            }`}
+          >
+            Todas
+          </button>
+          {categories.map((c) => (
+            <button
+              key={c}
+              onClick={() => setCategoryFilter(c === categoryFilter ? "" : c)}
+              className={`text-xs px-3 py-1.5 rounded-full border ${
+                categoryFilter === c ? "border-brand-500 bg-brand-50 text-brand-700" : "border-line text-muted"
+              }`}
+            >
+              {c}
+            </button>
+          ))}
         </div>
       )}
 

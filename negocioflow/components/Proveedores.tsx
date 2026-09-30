@@ -4,6 +4,7 @@ import { Plus, X, Phone, Mail, Trash2 } from "lucide-react";
 import { supabase } from "../lib/supabaseClient";
 import { type Business, type Supplier } from "../lib/types";
 import ProGate from "./ProGate";
+import OwnerGate from "./OwnerGate";
 import { friendlyDbError } from "../lib/plan";
 
 function ProveedoresInner({ business }: { business: Business }) {
@@ -208,8 +209,10 @@ function SupplierForm({
 
 export default function Proveedores({ business }: { business: Business }) {
   return (
-    <ProGate title="Proveedores" description="Registra tus proveedores y sus compras.">
-      <ProveedoresInner business={business} />
-    </ProGate>
+    <OwnerGate title="Proveedores">
+      <ProGate title="Proveedores" description="Registra tus proveedores y sus compras.">
+        <ProveedoresInner business={business} />
+      </ProGate>
+    </OwnerGate>
   );
 }

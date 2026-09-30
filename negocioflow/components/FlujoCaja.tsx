@@ -5,6 +5,7 @@ import { supabase } from "../lib/supabaseClient";
 import { fmtCLP, type Business } from "../lib/types";
 import { monthRange } from "../lib/dates";
 import ProGate from "./ProGate";
+import OwnerGate from "./OwnerGate";
 
 interface MonthFlow {
   month: string;
@@ -119,8 +120,10 @@ function FlujoCajaInner({ business }: { business: Business }) {
 
 export default function FlujoCaja({ business }: { business: Business }) {
   return (
-    <ProGate title="Flujo de caja" description="Mira cuánto dinero entra y sale de tu negocio.">
-      <FlujoCajaInner business={business} />
-    </ProGate>
+    <OwnerGate title="Flujo de caja">
+      <ProGate title="Flujo de caja" description="Mira cuánto dinero entra y sale de tu negocio.">
+        <FlujoCajaInner business={business} />
+      </ProGate>
+    </OwnerGate>
   );
 }

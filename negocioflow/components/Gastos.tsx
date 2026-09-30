@@ -5,6 +5,7 @@ import { supabase } from "../lib/supabaseClient";
 import { fmtCLP, EXPENSE_CATEGORIES, PAYMENT_METHODS, type Business, type Expense } from "../lib/types";
 import { localISODate, formatDateCL } from "../lib/dates";
 import { friendlyDbError } from "../lib/plan";
+import OwnerGate from "./OwnerGate";
 
 const EMPTY_FORM = {
   description: "",
@@ -15,7 +16,7 @@ const EMPTY_FORM = {
   note: "",
 };
 
-export default function Gastos({ business }: { business: Business }) {
+function GastosInner({ business }: { business: Business }) {
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -219,5 +220,13 @@ function FormField({ label, children }: { label: string; children: React.ReactNo
       <label className="text-xs text-muted">{label}</label>
       <div className="mt-1">{children}</div>
     </div>
+  );
+}
+
+export default function Gastos({ business }: { business: Business }) {
+  return (
+    <OwnerGate title="Gastos">
+      <GastosInner business={business} />
+    </OwnerGate>
   );
 }

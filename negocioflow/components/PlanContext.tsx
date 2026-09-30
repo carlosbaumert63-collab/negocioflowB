@@ -1,7 +1,7 @@
 "use client";
 import React, { createContext, useContext, useEffect, useState, useCallback } from "react";
 import { supabase } from "../lib/supabaseClient";
-import type { Business, Subscription } from "../lib/types";
+import type { Business, BusinessRole, Subscription } from "../lib/types";
 import { isProSub, daysUntil } from "../lib/plan";
 
 interface PlanCtx {
@@ -10,6 +10,8 @@ interface PlanCtx {
   isPro: boolean;
   daysLeft: number | null;
   showUpgrade: boolean;
+  role: BusinessRole;
+  isOwner: boolean;
   goToPlan: () => void;
   closeUpgrade: () => void;
   refreshSubscription: () => Promise<void>;
@@ -17,7 +19,15 @@ interface PlanCtx {
 
 const Ctx = createContext<PlanCtx | null>(null);
 
-export function PlanProvider({ business, children }: { business: Business; children: React.ReactNode }) {
+export function PlanProvider({
+  business,
+  role = "owner",
+  children,
+}: {
+  business: Business;
+  role?: BusinessRole;
+  children: React.ReactNode;
+}) {
   const [subscription, setSubscription] = useState<Subscription | null>(null);
   const [showUpgrade, setShowUpgrade] = useState(false);
 
@@ -45,6 +55,8 @@ export function PlanProvider({ business, children }: { business: Business; child
         isPro,
         daysLeft,
         showUpgrade,
+        role,
+        isOwner: role === "owner",
         goToPlan: () => setShowUpgrade(true),
         closeUpgrade: () => setShowUpgrade(false),
         refreshSubscription,

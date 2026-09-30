@@ -1,5 +1,5 @@
 import { supabase } from "./supabaseClient";
-import { fmtCLP, type Business } from "./types";
+import { fmtCLP, type Business, type Sale } from "./types";
 import { monthRange, formatDateCL } from "./dates";
 
 function downloadBlob(filename: string, content: BlobPart, type: string) {
@@ -97,6 +97,55 @@ export async function exportProductsCSV(businessId: string) {
     ]);
   });
   downloadBlob(`productos_${Date.now()}.csv`, toCSV(rows), "text/csv;charset=utf-8");
+}
+
+// Comprobante simple de una venta, NO es una boleta ni factura electrónica
+// (eso requiere certificado digital y CAF del SII — ver lib/sii.ts). Sirve
+// para entregarle algo en papel/PDF al cliente mientras tanto.
+export async function exportSaleReceiptPDF(business: Business, sale: Sale) {
+  const [{ default: jsPDF }] = await Promise.all([import("jspdf")]);
+  await import("jspdf-autotable");
+
+  const doc = new jsPDF();
+  doc.setFontSize(15);
+  doc.text(business.name, 14, 18);
+  doc.setFontSize(10);
+  doc.text(`Comprobante de venta · ${formatDateCL(sale.sale_date)}`, 14, 25);
+  doc.setFontSize(8);
+  doc.setTextColor(140);
+  doc.text("Este documento no reemplaza una boleta o factura electrónica ante el SII.", 14, 31);
+  doc.setTextColor(0);
+
+  (doc as any).autoTable({
+    startY: 37,
+    head: [["Producto", "Cant.", "Precio unit.", "Subtotal"]],
+    body: (sale.sale_items || []).map((i) => [
+      i.product_name,
+      String(i.quantity),
+      fmtCLP(i.unit_price),
+      fmtCLP(i.unit_price * i.quantity),
+    ]),
+    theme: "grid",
+    headStyles: { fillColor: [5, 150, 105] },
+  });
+
+  let y = (doc as any).lastAutoTable.finalY + 8;
+  doc.setFontSize(10);
+  doc.text(`Subtotal: ${fmtCLP(sale.subtotal)}`, 14, y);
+  y += 6;
+  if (Number(sale.discount) > 0) {
+    doc.text(`Descuento: -${fmtCLP(sale.discount)}`, 14, y);
+    y += 6;
+  }
+  doc.setFontSize(13);
+  doc.text(`Total: ${fmtCLP(sale.total)}`, 14, y);
+  y += 8;
+  doc.setFontSize(9);
+  doc.setTextColor(100);
+  doc.text(`Método de pago: ${sale.payment_method}`, 14, y);
+  doc.setTextColor(0);
+
+  doc.save(`comprobante_${sale.id.slice(0, 8)}.pdf`);
 }
 
 export async function exportMonthlyPDF(business: Business, offset = 0) {
